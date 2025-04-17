@@ -1,32 +1,79 @@
-<!-- chat.html -->
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta charset="UTF-8">
+  <title>Art Piece Controller</title>
 </head>
 <body>
-  <h3>LAN Chat 3</h3>
-  <input id="msg" placeholder="Type a message..." />
-  <button onclick="send()">Send</button>
-  <pre id="log"></pre>
+  <div id="setup">
+    <h2>Register Position</h2>
+    <select id="position">
+        <option value="LEFT">LEFT</option>
+        <option value="CENTER">CENTER</option>
+        <option value="RIGHT">RIGHT</option>
+    </select>
+    <button onclick="register()">Register</button>
+
+    <h3 id="status">Not connected</h3>
+  </div>
+  
+  <video id="art" autoplay muted loop playsinline style="width:100vw; height:100vh; object-fit:cover;"></video>
 
   <script>
-    const ip = "wss://192.168.2.47:3000"; // Replace with host device’s local IP
-    const socket = new WebSocket(ip);
-    const log = document.getElementById("log");
+    const socket = new WebSocket("wss://192.168.2.47:3000"); // Adjust IP
+    const status = document.getElementById("status");
+    const art = document.getElementById("art");
+    let pos = ""
+    let registered = false;
 
-    socket.onmessage = async (e) => {
-      const text = await e.data.text();  // Read Blob as text
-      log.textContent += "\nPeer: " + text;
+    socket.onopen = () => {
+      status.textContent = "Connected. Please register.";
     };
 
-    function send() {
-      const msg = document.getElementById("msg").value;
-      socket.send(msg);
-      log.textContent += "\nYou: " + msg;
+    socket.onmessage = async (e) => {
+      const msg = typeof e.data === 'string' ? e.data : await e.data.text();
+      console.log("Received:", msg);
+      if (msg.startsWith("show")) {
+        document.getElementById("setup").hidden = true
+        const filename = msg.split(" ")[1];
+        art.src = filename;
+        art.hidden = false;
+        art.load(); 
+        art.play(); 
+      }
+      if (msg.startsWith("reg success")) {
+        registered = true;
+        console.log("reg success")
+        status.textContent = "✅ Registered as " + pos + " successfully";
+      }
+      if (msg.startsWith("reg error")) {
+        registered = false;
+        status.textContent = "❌ Positions " + pos + " already taken";
+      }
+    };
+
+    socket.onerror = (e) => {
+      console.error("WebSocket error", e);
+      status.textContent = "Connection error. Likely too many clients connected.";
+    };
+
+    function register() {
+      pos = document.getElementById("position").value;
+      socket.send(JSON.stringify({ action: "register", role: pos }));
     }
+
+    document.body.addEventListener("click", () => {
+        if (registered && socket.readyState === WebSocket.OPEN) {
+            console.log("📤 Sending tap event");
+            socket.send(JSON.stringify({ action: "tapped" }));
+        } else {
+            console.warn("⚠️ Tap ignored (not registered or socket not open)");
+        }
+    });
+
   </script>
 </body>
 </html>
