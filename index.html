@@ -7,18 +7,19 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body>
-  <h3>LAN Chat</h3>
+  <h3>LAN Chat2</h3>
   <input id="msg" placeholder="Type a message..." />
   <button onclick="send()">Send</button>
   <pre id="log"></pre>
 
   <script>
-    const ip = "ws://192.168.68.53:3000"; // Replace with host device’s local IP
+    const ip = "ws://192.168.2.47:3000"; // Replace with host device’s local IP
     const socket = new WebSocket(ip);
     const log = document.getElementById("log");
 
-    socket.onmessage = e => {
-      log.textContent += "\nPeer: " + e.data;
+    socket.onmessage = async (e) => {
+      const text = await e.data.text();  // Read Blob as text
+      log.textContent += "\nPeer: " + text;
     };
 
     function send() {
