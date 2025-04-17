@@ -1,25 +1,31 @@
+<!-- chat.html -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: black;
-      overflow: hidden;
-      height: 100%;
-    }
-    img {
-      width: 100vw;
-      height: 100vh;
-      object-fit: cover;
-    }
-  </style>
 </head>
 <body>
-  <img src="your-animation.gif" alt="Art GIF">
+  <h3>LAN Chat</h3>
+  <input id="msg" placeholder="Type a message..." />
+  <button onclick="send()">Send</button>
+  <pre id="log"></pre>
+
+  <script>
+    const ip = "ws://192.168.68.53:3000"; // Replace with host device’s local IP
+    const socket = new WebSocket(ip);
+    const log = document.getElementById("log");
+
+    socket.onmessage = e => {
+      log.textContent += "\nPeer: " + e.data;
+    };
+
+    function send() {
+      const msg = document.getElementById("msg").value;
+      socket.send(msg);
+      log.textContent += "\nYou: " + msg;
+    }
+  </script>
 </body>
 </html>
