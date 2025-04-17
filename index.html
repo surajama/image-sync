@@ -1,32 +1,40 @@
-<!-- chat.html -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-</head>
-<body>
-  <h3>LAN Chat2</h3>
-  <input id="msg" placeholder="Type a message..." />
-  <button onclick="send()">Send</button>
-  <pre id="log"></pre>
+const fs = require('fs');
+const https = require('https');
+const WebSocket = require('ws');
 
-  <script>
-    const ip = "ws://192.168.2.47:3000"; // Replace with host device’s local IP
-    const socket = new WebSocket(ip);
-    const log = document.getElementById("log");
+// Read cert and key
+const server = https.createServer({
+  cert: fs.readFileSync('cert.pem'),
+  key: fs.readFileSync('key.pem')
+});
 
-    socket.onmessage = async (e) => {
-      const text = await e.data.text();  // Read Blob as text
-      log.textContent += "\nPeer: " + text;
-    };
+const wss = new WebSocket.Server({ server });
 
-    function send() {
-      const msg = document.getElementById("msg").value;
-      socket.send(msg);
-      log.textContent += "\nYou: " + msg;
+let clients = new Set();
+
+wss.on('connection', ws => {
+  const id = Math.random().toString(36).substring(2, 8);
+  ws._id = id;
+  clients.add(ws);
+  console.log(`🟢 Client connected: ${id} (Total: ${clients.size})`);
+
+  ws.on('message', message => {
+    console.log(`📨 From ${id}: ${message}`);
+    for (const client of clients) {
+      if (client !== ws && client.readyState === WebSocket.OPEN) {
+        client.send(message);
+        console.log(`➡️ Relayed from ${id} to ${client._id}`);
+      }
     }
-  </script>
-</body>
-</html>
+  });
+
+  ws.on('close', () => {
+    clients.delete(ws);
+    console.log(`🔴 Client disconnected: ${id} (Remaining: ${clients.size})`);
+  });
+});
+
+// Start the server
+server.listen(3000, () => {
+  console.log('🚀 Secure WebSocket server running port 3000');
+});
