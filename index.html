@@ -1,6 +1,26 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+        video {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            opacity: 0; /* Start hidden */
+            transition: opacity 1s ease-in-out; /* Smooth fade */
+        }
+        video.loaded {
+            opacity: 1; /* Fully visible after load */
+        }
+    </style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -26,33 +46,50 @@
     const socket = new WebSocket("wss://art.a2isol.com");
     const status = document.getElementById("status");
     const art = document.getElementById("art");
-    let pos = ""
+    let pos = "";
     let registered = false;
+    let pendingFade = false; // Track if we expect a fade
+
+    // Attach ONCE
+    art.onloadeddata = () => {
+        if (pendingFade) {
+            art.classList.add("loaded");
+            art.play();
+            pendingFade = false; // Reset after fading in
+        }
+    };
 
     socket.onopen = () => {
-      status.textContent = "Connected. Please register.";
+    status.textContent = "Connected. Please register.";
     };
 
     socket.onmessage = async (e) => {
-      const msg = typeof e.data === 'string' ? e.data : await e.data.text();
-      console.log("Received:", msg);
-      if (msg.startsWith("show")) {
-        document.getElementById("setup").hidden = true
+    const msg = typeof e.data === 'string' ? e.data : await e.data.text();
+    console.log("Received:", msg);
+
+    if (msg.startsWith("show")) {
+        document.getElementById("setup").hidden = true;
         const filename = msg.split(" ")[1];
+        
+        // Start hidden
+        art.classList.remove("loaded");
+        pendingFade = true; // Expect a fade after new video loads
+        
+        // Change video source
         art.src = filename;
-        art.hidden = false;
-        art.load(); 
-        art.play(); 
-      }
-      if (msg.startsWith("reg success")) {
+        art.load();
+    }
+
+    if (msg.startsWith("reg success")) {
         registered = true;
-        console.log("reg success")
+        console.log("reg success");
         status.textContent = "✅ Registered as " + pos + " successfully";
-      }
-      if (msg.startsWith("reg error")) {
+    }
+
+    if (msg.startsWith("reg error")) {
         registered = false;
         status.textContent = "❌ Positions " + pos + " already taken";
-      }
+    }
     };
 
     socket.onerror = (e) => {
