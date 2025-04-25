@@ -9,13 +9,16 @@
             width: 100%;
             overflow: hidden;
         }
+        body.active {
+            background: black;
+        }
         video {
             display: block;
             width: 100vw;
             height: 100vh;
             object-fit: cover;
             opacity: 0; /* Start hidden */
-            transition: opacity 1s ease-in-out; /* Smooth fade */
+            transition: opacity 0.5s ease-in-out; /* Smooth fade */
         }
         video.loaded {
             opacity: 1; /* Fully visible after load */
@@ -70,7 +73,7 @@
     if (msg.startsWith("show")) {
         document.getElementById("setup").hidden = true;
         const filename = msg.split(" ")[1];
-        
+        document.body.classList.add("active");
         // Start hidden
         art.classList.remove("loaded");
         pendingFade = true; // Expect a fade after new video loads
